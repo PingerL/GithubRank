@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="https://unpkg.com/jquery@1.9.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://at.alicdn.com/t/font_1432013_n891s9be2yf.css">
+    <title>Document</title>
+    <style>
+        *{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html,body,main {
+            height: 100%;
+        }
+        body {
+            position: relative;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        a {
+            text-decoration: none;
+            color: black;
+        }
+        h1 {
+            text-align: center;
+            width: 100%;
+            background-color: green;
+            padding: 10px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            color: white;
+        }
+        footer {
+            display: flex;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+            height: 50px;
+            /* background-color: white; */
+        }
+        footer>div {
+            flex: 1;
+            padding-top: 10px;
+            background-color: green;
+            text-align: center;
+            /* border-top: 1px solid #ccc; */
+            cursor: pointer;
+            color: white;
+        }
+        footer>div>span {
+            display:block;  
+        }
+        .active {
+            color: yellow;
+        }
+        
+        main {
+            background-color: white;
+            height: calc(100vh - 50px);
+        }
+        main>section {
+            height: 100%; /* 踩坑，若没有设置height与父容器一样,则在切换不同的section时有一个跳动的过程*/
+            display: none;
+            padding: 10px;
+            overflow: scroll;
+        }
+        main>section>.container {
+            padding-top: 30px;
+        }
+        main>section:first-child {
+            display: block;
+        }
+        .item {
+            display: flex;
+            border-bottom: 1px solid #ccc;
+            padding: 10px;
+        }
+        .item>a {
+            display: flex;
+        }
+        .item .order {
+            display: flex;
+            align-items: center;
+        }
+        .item .order span {
+            padding: 0 4px;
+            color: white;
+            background-color: green;
+        }
+        .item .detail {
+            padding-left: 10px;
+        }
+        .extra {
+            color: #aaa;
+        }
+        .loading {
+            color: red;
+            padding-top: 10px;
+            text-align: center;
+            display: none;
+        }
+        @keyframes rotate {
+            0% {transform: rotate(0deg);}
+            100% {transform: rotate(180deg);}
+        }
+        .loading .iconfont{
+            display: inline-block;
+            animation: 1s rotate linear infinite;
+        }
+        .cover {
+            padding-left: 10px;
+        }
+        .cover img {
+            width: 50px;
+        }
+        .git-link {
+            color: #666;
+            font-weight: 800;
+        }
+        h2 {
+            margin-bottom: 10px;
+        }
+       
+        section .search-area{
+            margin-top: 50px;
+            color: #333;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+            position: relative;
+        }
+        section .search-area input {
+            width: calc(100% - 110px);
+            padding: 8px;
+            background-color: #eee;
+            border: none;
+            border-radius: 2px;
+            box-shadow: none;
+            outline: none;
+        }
+        section .search-area .button{
+            position: absolute;
+            right: 58px;
+            padding: 8px 10px;
+            background: green;
+            color: #fff;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        section .search-area .clear {
+            right: 0;
+            
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <section class="repo-board">
+            <h1>Github项目排行</h1>
+            <div class="container">
+                <!-- <div class="item">
+                    <a href="">
+                        <div class="order"><span>1</span></div>
+                        <div class="detail">
+                            <h2></h2>
+                            <div class="description"></div>
+                            <div class="star"></div>
+                        </div>
+                    </a>
+                </div> -->
+            </div>
+            <div class="loading"><span class="iconfont icon-loading"></span></div>
+        </section>
+        <section class="user-board">
+            <h1>Github用户排行</h1>
+            <div class="container">
+
+            </div>
+            <div class="loading"><span class="iconfont icon-loading"></span></div>
+        </section>
+        <section class="search">
+            <h1>Github项目搜索</h1>
+            <div class="wrap">
+                <div class="search-area">
+                    <input type="text" placeholder="Search repos">
+                    <span class="button search"> Search</span>
+                    <span class="button clear"> Clear</span>
+                </div>
+                <div class="search-result">
+                    <div class="container"></div>
+                    <div class="loading"><span class="iconfont icon-loading"></span> </div>
+                </div>        
+            </div>
+    </section>
+    </main>
+    <footer>
+        <div class="active"><span class="iconfont icon-rank"></span><span>Top res</span></div>
+        <div><span class="iconfont icon-author"></span><span>Top Author</span></div>
+        <div><span class="iconfont icon-search"></span><span>Search</span></div>
+    </footer>
+    <script>
+        var Helpers = {
+            isToBottom: function($viewport,$content){
+                return $viewport.height() + $viewport.scrollTop() + 30 > $content.height()
+            }
+        }
+
+        var Paging = {
+            init: function(){
+                this.$tabs = $('footer>div')
+                this.$pags = $('main>section')
+                this.bind()
+            },
+            bind: function(){
+                _this = this
+                this.$tabs.on('click',function(){
+                    let index = $(this).index()
+                    console.log(index)
+                    $(this).addClass('active').siblings().removeClass('active')
+                    _this.$pags.eq(index).fadeIn().siblings().fadeOut()
+                })
+
+            }
+        }
+        //面板1
+        var RepoBoard = {
+            init: function(){
+                var _this = this
+                this.$container = $('.repo-board')
+                this.$content = this.$container.find('.container')
+                this.page = 1
+                this.count = 30
+                this.isLoading = false
+                this.isFinished = false
+                this.bind()
+                this.getData(function(result){
+                    _this.renderData(result.data)
+                    _this.page++
+                })
+            },
+            bind: function(){
+                var _this = this
+                //使用函数节流，减少请求次数
+                var clock
+                this.$container.on('scroll',function(){
+                    if (clock){
+                        clearTimeout(clock)
+                    }
+                    clock = setTimeout(function(){
+                        console.log('_thisLoading:'+_this.isLoading)
+                        if(Helpers.isToBottom(_this.$container,_this.$content) && !_this.isFinished && !_this.isLoading){
+                        console.log('to Bottom')
+                        _this.getData(function(result){
+                            _this.renderData(result.data)
+                            _this.page++
+                            if(_this.page * _this.count >result.data.total_count) {
+                                _this.isFinished = true
+                            }
+                        })
+                    }
+                    },500)
+                })
+            },
+            getData: function(callback){
+                var _this = this
+                this.isLoading = true
+                this.$container.find('.loading').show(400)
+                $.ajax({
+                    url: 'https://api.github.com/search/repositories?q=language:javascript&sort=stars&order=desc',
+                    data: {
+                        page: this.page
+                    },
+                    dataType: 'jsonp'
+                }).done(function(result){
+                    // console.log(result)
+                    _this.isLoading = false
+                    _this.$container.find('.loading').hide(400)
+                    callback(result)
+                })
+            },
+            renderData: function(data){
+                var _this = this
+                console.log(data) //用来调试数据，可以发现出错原因（如此API请求有限数的要求，若规定事件内超过来请求次数则会出错）
+                data.items.forEach(function(item,index){
+                    // console.log(item.description)
+                    var $node = _this.createNode(item,(_this.page-1)*_this.count+index+1)
+                    _this.$content.append($node)
+
+                })
+            },
+            createNode: function(subject,index){
+                var $node = $(
+                    `<div class="item">
+                        <a href="">
+                            <div class="order"><span></span></div>
+                            <div class="detail">
+                                <h2></h2>
+                                <div class="description"></div>
+                                <div class="extra"><span class="star"></span> star</div>
+                            </div>
+                        </a>
+                    </div>
+                    `)
+                $node.find('.order span').text(index)
+                $node.find('a').attr('herf',subject.html_url)
+                $node.find('.detail h2').text(subject.name)
+                $node.find('.detail .description').text(subject.description)
+                $node.find('.detail .star').text(subject.forks_count)
+                return $node
+            }
+        }
+        //面板2
+        var UserBoard = {
+            init: function(){
+                var _this = this
+                this.$container = $('.user-board')
+                this.$content = this.$container.find('.container')
+                this.page = 1
+                this.count = 30
+                this.isLoading = false
+                this.isFinished = false
+                this.bind()
+                this.getData(function(result){
+                    _this.renderData(result.data)
+                    _this.page++
+                })
+            },
+            bind: function(){
+                var _this = this
+                //使用函数节流，减少请求次数
+                var clock
+                this.$container.on('scroll',function(){
+                    if (clock){
+                        clearTimeout(clock)
+                    }
+                    clock = setTimeout(function(){
+                        console.log('_thisLoading:'+_this.isLoading)
+                        if(Helpers.isToBottom(_this.$container,_this.$content) && !_this.isFinished && !_this.isLoading){
+                        console.log('to Bottom')
+                        _this.getData(function(result){
+                            _this.renderData(result.data)
+                            _this.page++
+                            if(_this.page * _this.count >result.data.total_count) {
+                                _this.isFinished = true
+                            }
+                        })
+                    }
+                    },500)
+                })
+            },
+            getData: function(callback){
+                var _this = this
+                this.isLoading = true
+                this.$container.find('.loading').show(400)
+                $.ajax({
+                    url: 'https://api.github.com/search/users?q=followers:>1000+language:javascript',
+                    data: {
+                        page: this.page
+                    },
+                    dataType: 'jsonp'
+                }).done(function(result){
+                    // console.log(result)
+                    _this.isLoading = false
+                    _this.$container.find('.loading').hide(400)
+                    callback(result)
+                })
+            },
+            renderData: function(data){
+                var _this = this
+                console.log(data) 
+                data.items.forEach(function(item,index){
+                    // console.log(item.description)
+                    var $node = _this.createNode(item,(_this.page-1)*_this.count+index+1)
+                    _this.$content.append($node)
+
+                })
+            },
+            createNode: function(subject,index){
+                var $node = $(
+                    `<div class="item">
+                        <div class="order"><span></span></div>
+                        <div class="cover"><img src="" alt=""></div>
+                        <div class="detail">
+                            <h2></h2>
+                            <div><a class="git-link">Github link</a></div>                               
+                        </div>
+                    </div>
+                    `)
+                $node.find('.order span').text(index)
+                $node.find('.detail a').text(subject.html_url)
+                $node.find('.detail a').attr('href',subject.html_url)
+                $node.find('.detail h2').text(subject.login)
+                $node.find('.cover img').attr('src',subject.avatar_url)
+                return $node
+            }
+        }
+        //面板3
+        var Search = {
+            init: function() {
+                this.page = 1
+                this.count = 30
+                this.isFinshed = false
+                this.isLoading = false
+                this.$container = $('.search')
+                this.$content = this.$container.find('.container')
+                this.bind()
+            },
+
+            bind: function() {
+                var _this = this
+                this.$container.find('.search-area .search').on('click', function(){
+                    _this.getData(function(result){
+                    _this.renderData(result.data)
+                })
+                })
+                this.$container.find('.search-area .clear').on('click', function(){
+                    $('.search-result .container').empty()
+                    _this.$container.find('.search-area input').val('')
+                })
+                console.log(this.$container.find('.search-area input'))
+                this.$container.find('.search-area input').on('keyup', function(e){
+                if(e.key === 'Enter') {
+                    _this.getData(function(result){
+                    _this.renderData(result.data)
+                })
+                }
+                })
+
+                this.$container.on('scroll', function(){
+                console.log(_this.isLoading)
+                if(Helpers.isToBottom(_this.$container, _this.$container.find('.wrap')) && !_this.isFinshed && !_this.isLoading){
+                    console.log('to bottom')
+                    _this.getData(function(result){
+                    _this.renderData(result.data)
+                    _this.page++
+                    if(_this.page * _this.count > result.data.total_count) {
+                        _this.isFinshed = true
+                    }
+                    
+                    })
+                }
+                })
+            },
+
+            getData: function(callback){
+                var _this = this
+                var keyword = this.$container.find('.search-area input').val()
+                this.isLoading = true
+                this.$container.find('.loading').show(400)
+                $.ajax({
+                url: `https://api.github.com/search/repositories?q=${keyword}+language:javascript&sort=stars&order=desc&page=${_this.page}`,
+                dataType: 'jsonp'
+                }).done(function(ret){
+                _this.isLoading = false
+                _this.$container.find('.loading').hide(400)
+                callback(ret)
+                })
+            },
+
+            renderData(data){
+                var _this = this
+                data.items.forEach(function(item, index){
+                var $node = _this.createNode(item, (_this.page-1)*_this.count+index+1)
+                _this.$content.append($node)    
+                })
+            },
+            createNode: function(subject, index){
+                var $node = $(`<div class="item">
+                <a href="https://github.com/TryGhost/Ghost">
+                    <div class="order"><span>1</span></div>
+                    <div class="detail">
+                    <h2>Ghost </h2>
+                    <div class="description">Knockout makes it easier to create rich, responsive UIs with JavaScript</div>
+                    <div class="extra"><span class="star-count">4196</span> star</div>  
+                </div>
+                </a>
+                </div> `)
+                $node.find('.order span').text(index)
+                $node.find('a').attr('href', subject.html_url)    
+                $node.find('.detail h2').text(subject.name)  
+                $node.find('.detail .description').text(subject.description)
+                $node.find('.detail .collection').text(subject.collect_count)  
+                $node.find('.detail .star-count').text(subject.stargazers_count ) 
+                return $node
+            }
+        }
+        var App = {
+            init: function(){
+                Paging.init()
+                RepoBoard.init()
+                UserBoard.init()
+                Search.init()
+            }
+        }
+        App.init()
+    </script>
+</body>
+</html>
